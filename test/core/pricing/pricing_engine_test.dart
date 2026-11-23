@@ -119,6 +119,27 @@ void main() {
     expect(result.netProfitMicros, 46778769);
   });
 
+  test('matches the locked pink and black material examples exactly', () {
+    final result = const PricingEngine().calculate(
+      input(
+        pinkModelMg: 20000,
+        pinkPurgeMg: 0,
+        blackModelMg: 10000,
+        blackPurgeMg: 0,
+        runs: 1,
+        unitsPerRun: 1,
+        targetMarginBps: 0,
+        platformFeeBps: 0,
+        taxBps: 0,
+      ),
+    );
+
+    expect(result.materialLines, hasLength(2));
+    expect(result.materialLines[0].costMicros, 2000000); // 2.00 AED.
+    expect(result.materialLines[1].costMicros, 900000); // 0.90 AED.
+    expect(result.materialMicros, 2900000);
+  });
+
   test('minimum order floor is applied before VAT', () {
     final result = const PricingEngine().calculate(
       input(

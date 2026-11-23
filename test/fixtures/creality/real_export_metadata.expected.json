@@ -1,0 +1,9 @@
+{
+  "slicer": "crealityPrint",
+  "slicerVersion": "Creality_Print V7.3.0.6157",
+  "durationSeconds": 42452,
+  "durationProvenanceKey": "estimated printing time",
+  "totalConsumedMassMg": [237810],
+  "materialProvenanceKeys": ["filament used [g]"],
+  "warningCodes": ["version_fallback_key"]
+}

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:filarithm/core/domain/print_project.dart';
@@ -92,5 +93,33 @@ ${List.filled(30, 'G1 X20 Y20 E2').join('\n')}
     } finally {
       await directory.delete(recursive: true);
     }
+  });
+
+  test('matches the anonymized Creality Print export fixture', () async {
+    final fixture = File('test/fixtures/creality/real_export_metadata.gcode');
+    final expected = jsonDecode(
+      await File('test/fixtures/creality/real_export_metadata.expected.json')
+          .readAsString(),
+    ) as Map<String, dynamic>;
+
+    final result = await parser.parseFile(fixture);
+    final plate = result.plates.single;
+
+    expect(result.slicer.name, expected['slicer']);
+    expect(result.slicerVersion, expected['slicerVersion']);
+    expect(plate.durationSeconds, expected['durationSeconds']);
+    expect(plate.durationProvenanceKey, expected['durationProvenanceKey']);
+    expect(
+      plate.materials.map((material) => material.totalConsumedMassMg),
+      expected['totalConsumedMassMg'],
+    );
+    expect(
+      plate.materials.map((material) => material.provenanceKey),
+      expected['materialProvenanceKeys'],
+    );
+    expect(
+      result.warnings.map((warning) => warning.code),
+      containsAll(expected['warningCodes'] as List<dynamic>),
+    );
   });
 }
