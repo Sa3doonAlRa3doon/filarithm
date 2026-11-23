@@ -17,6 +17,17 @@ android {
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
+    packaging {
+        jniLibs {
+            // Some AR dependencies publish every desktop/emulator ABI. Keep
+            // sideloadable APKs mobile-only while leaving the Play AAB free to
+            // include x86_64 when this environment flag is absent.
+            if (System.getenv("FILARITHM_ARM_ONLY").equals("true", ignoreCase = true)) {
+                excludes += setOf("**/x86/**", "**/x86_64/**")
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

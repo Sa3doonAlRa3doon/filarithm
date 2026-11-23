@@ -40,9 +40,13 @@ jobs:
       - run: flutter pub get
       - run: flutter test
       - name: Build combined mobile APK
+        env:
+          FILARITHM_ARM_ONLY: 'true'
         run: flutter build apk --release --target-platform android-arm,android-arm64
       - run: mkdir -p dist/android && cp build/app/outputs/flutter-apk/app-release.apk dist/android/filarithm-1.0.0-mobile-arm64-armv7.apk
       - name: Build split APKs
+        env:
+          FILARITHM_ARM_ONLY: 'true'
         run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
       - run: |
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/android/filarithm-1.0.0-arm64.apk
