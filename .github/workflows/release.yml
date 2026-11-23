@@ -4,16 +4,23 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      ubuntu_only:
+        description: Build and validate only the Ubuntu packages
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
 jobs:
   android:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.ubuntu_only != true }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -82,7 +89,7 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsqlite3-dev libharfbuzz-dev tesseract-ocr tesseract-ocr-eng dpkg-dev xvfb
       - uses: subosito/flutter-action@v2
         with:
