@@ -20,6 +20,7 @@ class QuoteDocumentData {
     required this.price,
     this.customerName = 'Customer',
     this.businessName = 'AVEONEX',
+    this.issuedAt,
     this.trn,
     this.turnaround = 'To be confirmed',
     this.taxBasisPoints = 0,
@@ -34,6 +35,7 @@ class QuoteDocumentData {
   final PriceBreakdown price;
   final String customerName;
   final String businessName;
+  final DateTime? issuedAt;
   final String? trn;
   final String turnaround;
   final int taxBasisPoints;
@@ -186,7 +188,7 @@ class PdfQuoteService {
               arabicBold,
               'Date',
               'التاريخ',
-              _date(DateTime.now()),
+              _date(data.issuedAt ?? DateTime.now()),
             ),
             _bilingualInfoRow(
               latinBold,
