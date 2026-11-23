@@ -15,5 +15,11 @@ The Cura fixture is an anonymized metadata excerpt of a real Cura 5.3.1 export
 published as `slicer scripts/cura/SimpleCuraTest.gcode` in the public
 `mriscoc/Ender3V2S1` repository at commit
 `05903a80d6e15cc91b0bc690b35e08fd440a21e9`.
-An equivalent permission-cleared Bambu Studio export remains tracked in GitHub
-issue #1; inline unit samples do not claim to be real exports.
+The Bambu Studio fixture is an anonymized metadata excerpt of the real
+`runtime/uploads_8080/Cube.gcode` export in the MIT-licensed public
+`JohnMO2/BambuToElegooService` repository at commit
+`91b45fb67f28f0b06d374ce4c95749c6c9e2869e`.
+
+Together these fixtures provide real-export coverage for all five required
+slicer families. Inline samples cover focused edge cases but do not replace
+these provenance-backed files.

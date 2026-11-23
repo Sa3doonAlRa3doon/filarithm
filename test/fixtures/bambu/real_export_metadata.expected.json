@@ -1,0 +1,11 @@
+{
+  "slicer": "bambuStudio",
+  "slicerVersion": "BambuStudio 02.05.00.66",
+  "durationSeconds": 105,
+  "durationProvenanceKey": "estimated printing time",
+  "totalConsumedMassMg": [270],
+  "materialTypes": ["PLA"],
+  "materialColors": ["#000000"],
+  "materialProvenanceKeys": ["total filament used|weight [g]"],
+  "warningCodes": ["version_fallback_key"]
+}
