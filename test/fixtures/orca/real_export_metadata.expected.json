@@ -1,0 +1,11 @@
+{
+  "slicer": "orcaSlicer",
+  "slicerVersion": "OrcaSlicer 2.4.1",
+  "durationSeconds": 647,
+  "durationProvenanceKey": "estimated printing time",
+  "totalConsumedMassMg": [3690],
+  "materialTypes": ["PLA"],
+  "materialColors": ["#F2754E"],
+  "materialProvenanceKeys": ["filament used [g]"],
+  "warningCodes": ["version_fallback_key"]
+}
