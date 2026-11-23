@@ -35,7 +35,11 @@ class OfflineOcrResult {
 }
 
 class OfflineOcrService {
-  const OfflineOcrService();
+  const OfflineOcrService({this.temporaryDirectoryProvider});
+
+  /// Injectable so the preprocessing pipeline can be exercised without a
+  /// platform-channel implementation in deterministic desktop tests.
+  final Future<Directory> Function()? temporaryDirectoryProvider;
 
   String get engineName => Platform.isAndroid
       ? 'Google ML Kit (offline)'
@@ -161,7 +165,8 @@ class OfflineOcrService {
       image.grayscale(working),
       contrast: options.contrast,
     );
-    final directory = await getTemporaryDirectory();
+    final directory =
+        await (temporaryDirectoryProvider?.call() ?? getTemporaryDirectory());
     final normalizedFile = File(
       path.join(
         directory.path,
