@@ -1,0 +1,9 @@
+{
+  "slicer": "cura",
+  "slicerVersion": "Cura_SteamEngine 5.3.1",
+  "durationSeconds": 420,
+  "durationProvenanceKey": "TIME",
+  "totalConsumedMassMg": [983],
+  "materialProvenanceKeys": ["filament_length_converted"],
+  "warningCodes": ["length_converted"]
+}

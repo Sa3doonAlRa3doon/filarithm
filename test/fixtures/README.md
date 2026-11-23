@@ -11,5 +11,9 @@ using a 20 mm calibration cube and a Creality Ender-3 V3 KE profile.
 The PrusaSlicer fixture is an anonymized metadata excerpt of the real
 `resources/test_data/test_vase.gcode` export published by the official
 PrusaSlicer repository at commit `e6c85c50dcc56f9968a61dfdd7a3b695e1004037`.
-Equivalent permission-cleared exports for Bambu Studio and Cura remain tracked
-in GitHub issue #1; inline unit samples do not claim to be real exports.
+The Cura fixture is an anonymized metadata excerpt of a real Cura 5.3.1 export
+published as `slicer scripts/cura/SimpleCuraTest.gcode` in the public
+`mriscoc/Ender3V2S1` repository at commit
+`05903a80d6e15cc91b0bc690b35e08fd440a21e9`.
+An equivalent permission-cleared Bambu Studio export remains tracked in GitHub
+issue #1; inline unit samples do not claim to be real exports.
