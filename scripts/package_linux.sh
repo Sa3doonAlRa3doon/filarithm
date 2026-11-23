@@ -14,6 +14,11 @@ if [[ ! -x "$BUNDLE_DIR/filarithm" ]]; then
   exit 1
 fi
 
+if ! dpkg --validate-version "$VERSION"; then
+  echo "Invalid Debian package version: $VERSION" >&2
+  exit 1
+fi
+
 rm -rf "$PACKAGE_ROOT" "$DPKG_WORK"
 mkdir -p "$PACKAGE_ROOT/DEBIAN" "$PACKAGE_ROOT/opt/filarithm" "$PACKAGE_ROOT/usr/bin" "$PACKAGE_ROOT/usr/share/applications" "$OUTPUT_DIR" "$DPKG_WORK/debian"
 cp -a "$BUNDLE_DIR/." "$PACKAGE_ROOT/opt/filarithm/"
@@ -43,7 +48,21 @@ Architecture: any
 Description: Offline 3D print pricing
 SOURCE_CONTROL
 
-SHLIBS="$(cd "$DPKG_WORK" && dpkg-shlibdeps -O -e"$PACKAGE_ROOT/opt/filarithm/filarithm" -l"$PACKAGE_ROOT/opt/filarithm/lib" 2>/dev/null | sed -n 's/^shlibs:Depends=//p')"
+mapfile -d '' ELF_FILES < <(
+  find "$PACKAGE_ROOT/opt/filarithm" -type f \
+    \( -name filarithm -o -name '*.so' -o -name '*.so.*' \) -print0
+)
+SHLIB_ARGS=()
+for elf_file in "${ELF_FILES[@]}"; do
+  SHLIB_ARGS+=("-e$elf_file")
+done
+
+SHLIBS="$(
+  cd "$DPKG_WORK"
+  dpkg-shlibdeps -O "${SHLIB_ARGS[@]}" \
+    -l"$PACKAGE_ROOT/opt/filarithm/lib" |
+    sed -n 's/^shlibs:Depends=//p'
+)"
 DEPENDS="${SHLIBS:+$SHLIBS, }tesseract-ocr, tesseract-ocr-eng"
 
 cat > "$PACKAGE_ROOT/DEBIAN/control" <<CONTROL

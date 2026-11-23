@@ -96,18 +96,25 @@ jobs:
           flutter-version: '3.50.1'
           channel: stable
           cache: true
+      - name: Select package version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9] ]]; then
+            version="1.0.0-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
       - run: flutter config --enable-linux-desktop
       - run: flutter pub get
       - run: flutter build linux --release
-      - run: chmod +x scripts/package_linux.sh && scripts/package_linux.sh "${GITHUB_REF_NAME#v}"
+      - run: chmod +x scripts/package_linux.sh && scripts/package_linux.sh "$PACKAGE_VERSION"
       - name: Install package in clean runner
         run: |
-          sudo apt-get install -y "./dist/filarithm_${GITHUB_REF_NAME#v}_amd64.deb"
+          sudo apt-get install -y "./dist/filarithm_${PACKAGE_VERSION}_amd64.deb"
           xvfb-run -a timeout 10s filarithm || test $? -eq 124
       - run: |
           suffix="${{ matrix.os }}"
-          mv "dist/filarithm_${GITHUB_REF_NAME#v}_amd64.deb" "dist/filarithm_${GITHUB_REF_NAME#v}_${suffix}_amd64.deb"
-          mv "dist/filarithm_${GITHUB_REF_NAME#v}_linux_amd64.tar.gz" "dist/filarithm_${GITHUB_REF_NAME#v}_${suffix}_linux_amd64.tar.gz"
+          mv "dist/filarithm_${PACKAGE_VERSION}_amd64.deb" "dist/filarithm_${PACKAGE_VERSION}_${suffix}_amd64.deb"
+          mv "dist/filarithm_${PACKAGE_VERSION}_linux_amd64.tar.gz" "dist/filarithm_${PACKAGE_VERSION}_${suffix}_linux_amd64.tar.gz"
       - uses: actions/upload-artifact@v4
         with:
           name: filarithm-${{ matrix.os }}
