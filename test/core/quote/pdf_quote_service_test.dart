@@ -7,8 +7,16 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/quote_fixture.dart';
 
 Future<String?> extractPdfText(File pdf, File output) async {
+  final windowsGitPoppler = File(
+    r'C:\Program Files\Git\mingw64\bin\pdftotext.exe',
+  );
+  final executable = Platform.isWindows && windowsGitPoppler.existsSync()
+      ? windowsGitPoppler.path
+      : 'pdftotext';
   try {
-    final extract = await Process.run('pdftotext', [
+    final extract = await Process.run(executable, [
+      '-enc',
+      'UTF-8',
       '-layout',
       pdf.path,
       output.path,

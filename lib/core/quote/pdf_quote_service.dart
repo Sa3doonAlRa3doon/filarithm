@@ -396,11 +396,31 @@ class PdfQuoteService {
             // than the visually reversed glyph sequence.
             pw.Opacity(
               opacity: 0,
-              child: pw.Text(
-                _searchableArabicText(data, titleArabic),
-                style: pw.TextStyle(font: searchableArabicFont, fontSize: 0.1),
-                textDirection: pw.TextDirection.ltr,
-                maxLines: 1,
+              child: pw.Column(
+                children: [
+                  pw.Text(
+                    _searchableArabicText(data, titleArabic),
+                    style: pw.TextStyle(
+                      font: searchableArabicFont,
+                      fontSize: 0.1,
+                    ),
+                    textDirection: pw.TextDirection.ltr,
+                    maxLines: 1,
+                  ),
+                  // Poppler releases disagree on whether an invisible RTL run
+                  // should be returned in content order or visual order. The
+                  // mirrored run makes the logical Unicode text searchable in
+                  // both behaviors while remaining fully transparent.
+                  pw.Text(
+                    _reverseRunes(_searchableArabicText(data, titleArabic)),
+                    style: pw.TextStyle(
+                      font: searchableArabicFont,
+                      fontSize: 0.1,
+                    ),
+                    textDirection: pw.TextDirection.ltr,
+                    maxLines: 1,
+                  ),
+                ],
               ),
             ),
           ],
@@ -477,6 +497,9 @@ class PdfQuoteService {
       'تكلفة الإنتاج رسوم المنصة تعديل الحد الأدنى للطلب السعر قبل الضريبة '
       'ضريبة القيمة المضافة الإجمالي الشروط ${data.termsArabic} '
       'شكراً لاختياركم أفيو نيكس';
+
+  String _reverseRunes(String value) =>
+      String.fromCharCodes(value.runes.toList().reversed);
 
   pw.Widget _bilingualInfoRow(
     pw.Font latinBold,
