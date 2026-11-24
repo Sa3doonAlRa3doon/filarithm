@@ -29,6 +29,14 @@ jobs:
           flutter-version: '3.50.1'
           channel: stable
           cache: true
+      - name: Select Android release version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            version="1.0.0-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
       - name: Configure signing
         env:
           KEYSTORE_B64: ${{ secrets.FILARITHM_KEYSTORE_BASE64 }}
@@ -49,18 +57,18 @@ jobs:
       - name: Build combined mobile APK
         env:
           FILARITHM_ARM_ONLY: 'true'
-        run: flutter build apk --release --target-platform android-arm,android-arm64
-      - run: mkdir -p dist/android && cp build/app/outputs/flutter-apk/app-release.apk dist/android/filarithm-1.0.0-mobile-arm64-armv7.apk
+        run: flutter build apk --release --target-platform android-arm,android-arm64 --build-name "$PACKAGE_VERSION" --build-number "$VERSION_CODE"
+      - run: mkdir -p dist/android && cp build/app/outputs/flutter-apk/app-release.apk "dist/android/filarithm-${PACKAGE_VERSION}-mobile-arm64-armv7.apk"
       - name: Build split APKs
         env:
           FILARITHM_ARM_ONLY: 'true'
-        run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
+        run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 --build-name "$PACKAGE_VERSION" --build-number "$VERSION_CODE"
       - run: |
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/android/filarithm-1.0.0-arm64.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/android/filarithm-1.0.0-armv7.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/android/filarithm-${PACKAGE_VERSION}-arm64-v8a.apk"
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "dist/android/filarithm-${PACKAGE_VERSION}-armeabi-v7a.apk"
       - name: Build Play-distributed AAB
-        run: flutter build appbundle --release --target-platform android-arm,android-arm64,android-x64
-      - run: cp build/app/outputs/bundle/release/app-release.aab dist/android/filarithm-1.0.0.aab
+        run: flutter build appbundle --release --target-platform android-arm,android-arm64,android-x64 --build-name "$PACKAGE_VERSION" --build-number "$VERSION_CODE"
+      - run: cp build/app/outputs/bundle/release/app-release.aab "dist/android/filarithm-${PACKAGE_VERSION}.aab"
       - name: Verify release ABIs
         run: |
           for apk in dist/android/*.apk; do
@@ -70,13 +78,15 @@ jobs:
               exit 1
             fi
           done
-          unzip -Z1 dist/android/filarithm-1.0.0-arm64.apk | grep -q '^lib/arm64-v8a/'
-          ! unzip -Z1 dist/android/filarithm-1.0.0-arm64.apk | grep -q '^lib/armeabi-v7a/'
-          unzip -Z1 dist/android/filarithm-1.0.0-armv7.apk | grep -q '^lib/armeabi-v7a/'
-          ! unzip -Z1 dist/android/filarithm-1.0.0-armv7.apk | grep -q '^lib/arm64-v8a/'
-          unzip -Z1 dist/android/filarithm-1.0.0-mobile-arm64-armv7.apk | grep -q '^lib/arm64-v8a/'
-          unzip -Z1 dist/android/filarithm-1.0.0-mobile-arm64-armv7.apk | grep -q '^lib/armeabi-v7a/'
-          unzip -Z1 dist/android/filarithm-1.0.0.aab | grep -q '^base/lib/x86_64/'
+          unzip -Z1 "dist/android/filarithm-${PACKAGE_VERSION}-arm64-v8a.apk" | grep -q '^lib/arm64-v8a/'
+          ! unzip -Z1 "dist/android/filarithm-${PACKAGE_VERSION}-arm64-v8a.apk" | grep -q '^lib/armeabi-v7a/'
+          unzip -Z1 "dist/android/filarithm-${PACKAGE_VERSION}-armeabi-v7a.apk" | grep -q '^lib/armeabi-v7a/'
+          ! unzip -Z1 "dist/android/filarithm-${PACKAGE_VERSION}-armeabi-v7a.apk" | grep -q '^lib/arm64-v8a/'
+          unzip -Z1 "dist/android/filarithm-${PACKAGE_VERSION}-mobile-arm64-armv7.apk" | grep -q '^lib/arm64-v8a/'
+          unzip -Z1 "dist/android/filarithm-${PACKAGE_VERSION}-mobile-arm64-armv7.apk" | grep -q '^lib/armeabi-v7a/'
+          unzip -Z1 "dist/android/filarithm-${PACKAGE_VERSION}.aab" | grep -q '^base/lib/x86_64/'
+      - name: Publish SHA-256 manifest
+        run: cd dist/android && sha256sum * > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: filarithm-android
@@ -129,6 +139,13 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: Publish consolidated SHA-256 manifest
+        run: |
+          cd artifacts
+          rm -f SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | while read -r file; do
+            sha256sum "$file"
+          done > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
