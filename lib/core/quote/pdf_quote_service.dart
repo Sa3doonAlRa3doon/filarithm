@@ -253,7 +253,9 @@ class PdfQuoteService {
             pw.SizedBox(height: 18),
             if (data.itemizeByPlate)
               _plateTable(latinBold, arabicBold, data.project),
-            if (data.itemizeByPlate) pw.SizedBox(height: 18),
+            if (!data.itemizeByPlate)
+              _combinedTable(latinBold, arabicBold, data.project),
+            pw.SizedBox(height: 18),
             pw.Table(
               border: pw.TableBorder(
                 horizontalInside: const pw.BorderSide(color: PdfColors.grey300),
@@ -277,6 +279,14 @@ class PdfQuoteService {
                   'رسوم المنصة',
                   data.price.platformFeeMicros,
                 ),
+                if (data.price.minimumFloorApplied)
+                  _priceRow(
+                    latinBold,
+                    arabicBold,
+                    'Minimum-order adjustment',
+                    'تعديل الحد الأدنى للطلب',
+                    data.price.minimumFloorAdjustmentMicros,
+                  ),
                 _priceRow(
                   latinBold,
                   arabicBold,
@@ -398,7 +408,7 @@ class PdfQuoteService {
 
   Future<void> share(QuoteDocumentData data) async {
     final file = await buildTemporaryFile(data);
-    final summary = _summary(data);
+    final summary = shareSummary(data);
     if (Platform.isAndroid) {
       try {
         final shared = await _shareChannel.invokeMethod<bool>('shareWhatsApp', {
@@ -442,10 +452,10 @@ class PdfQuoteService {
   }
 
   Future<void> copySummary(QuoteDocumentData data) =>
-      Clipboard.setData(ClipboardData(text: _summary(data)));
+      Clipboard.setData(ClipboardData(text: shareSummary(data)));
 
-  String _summary(QuoteDocumentData data) =>
-      '${data.quoteNumber}\nCustomer: ${data.customerName}\nTotal: ${_money(data.price.finalPriceMicros)} AED\nTurnaround: ${data.turnaround}\n\nعرض سعر طباعة ثلاثية الأبعاد\nالإجمالي: ${_money(data.price.finalPriceMicros)} AED\nمدة التنفيذ: ${data.turnaround}';
+  String shareSummary(QuoteDocumentData data) =>
+      '3D print quotation\nQuote: ${data.quoteNumber}\nCustomer: ${data.customerName}\nTotal: ${_money(data.price.finalPriceMicros)} AED\nTurnaround: ${data.turnaround}\n\nعرض سعر طباعة ثلاثية الأبعاد\nرقم العرض: ${data.quoteNumber}\nالعميل: ${data.customerName}\nالإجمالي: ${_money(data.price.finalPriceMicros)} AED\nمدة التنفيذ: ${data.turnaround}';
 
   pw.Widget _bilingualInfoRow(
     pw.Font latinBold,
@@ -593,6 +603,77 @@ class PdfQuoteService {
               ),
             ],
           ),
+      ],
+    );
+  }
+
+  pw.Widget _combinedTable(
+    pw.Font latinBold,
+    ShapedFont arabicBold,
+    ParsedPrintProject project,
+  ) {
+    final selected = project.plates.where((plate) => plate.selected).toList();
+    final durationSeconds = selected.fold<int>(
+      0,
+      (sum, plate) => sum + plate.totalDurationSeconds,
+    );
+    final finishedUnits = selected.fold<int>(
+      0,
+      (sum, plate) => sum + plate.finishedUnits,
+    );
+    final modelOrTotalMassMg = selected.fold<int>(
+      0,
+      (plateSum, plate) =>
+          plateSum +
+          plate.materials.fold<int>(
+                0,
+                (sum, material) =>
+                    sum +
+                    (material.reportedTotalMassMg ?? material.modelMassMg),
+              ) *
+              plate.plateRuns,
+    );
+    final purgeMassMg = selected.fold<int>(
+      0,
+      (plateSum, plate) =>
+          plateSum +
+          plate.materials.fold<int>(
+                0,
+                (sum, material) => sum + material.purgeMassMg,
+              ) *
+              plate.plateRuns,
+    );
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.2),
+        1: pw.FlexColumnWidth(1),
+        2: pw.FlexColumnWidth(1.4),
+        3: pw.FlexColumnWidth(1.1),
+      },
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            _headerCell(latinBold, arabicBold, 'Time', 'الوقت'),
+            _headerCell(latinBold, arabicBold, 'Units', 'وحدات'),
+            _headerCell(
+              latinBold,
+              arabicBold,
+              'Model/total g',
+              'وزن المجسم/الإجمالي',
+            ),
+            _headerCell(latinBold, arabicBold, 'Purge g', 'وزن الهدر'),
+          ],
+        ),
+        pw.TableRow(
+          children: [
+            _valueCell('${(durationSeconds / 3600).toStringAsFixed(2)} h'),
+            _valueCell('$finishedUnits'),
+            _valueCell((modelOrTotalMassMg / 1000).toStringAsFixed(2)),
+            _valueCell((purgeMassMg / 1000).toStringAsFixed(2)),
+          ],
+        ),
       ],
     );
   }
