@@ -1,0 +1,14 @@
+{
+  "slicer": "orcaSlicer",
+  "slicerVersion": "OrcaSlicer 2.4.1 on 2026-11-24 at 06:21:43",
+  "plateCount": 2,
+  "durationSeconds": [2269, 8724],
+  "durationProvenanceKeys": ["total estimated time", "total estimated time"],
+  "totalConsumedMassMg": [[4270], [8370, 6630]],
+  "modelMassMg": [[0], [0, 0]],
+  "purgeMassMg": [[0], [0, 0]],
+  "materialTypes": [["PLA"], ["PLA", "PLA"]],
+  "materialColors": [["#F72585"], ["#F72585", "#000000"]],
+  "materialProvenanceKeys": [["filament used [g]"], ["filament used [g]", "filament used [g]"]],
+  "warningCodes": []
+}

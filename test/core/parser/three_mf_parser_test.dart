@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -37,6 +39,140 @@ void main() {
     expect(result.plates.first.durationSeconds, 3723);
     expect(result.plates.last.durationSeconds, 2520);
     expect(result.plates.last.materials, hasLength(2));
+  });
+
+  test('matches a complete genuine OrcaSlicer gcode.3mf export', () async {
+    final fixture = File(
+      'test/fixtures/orca/filarithm_cube_orcaslicer_2_4_1.gcode.3mf',
+    );
+    final expected = jsonDecode(
+      await File(
+        'test/fixtures/orca/filarithm_cube_orcaslicer_2_4_1.expected.json',
+      ).readAsString(),
+    ) as Map<String, dynamic>;
+
+    final result = await parser.parseFile(fixture);
+
+    expect(result.slicer.name, expected['slicer']);
+    expect(result.slicerVersion, expected['slicerVersion']);
+    expect(result.plates, hasLength(expected['plateCount'] as int));
+    expect(
+      result.plates.map((plate) => plate.durationSeconds),
+      expected['durationSeconds'],
+    );
+    expect(
+      result.plates.map((plate) => plate.durationProvenanceKey),
+      expected['durationProvenanceKeys'],
+    );
+    expect(
+      result.plates.map(
+        (plate) => plate.materials
+            .map((material) => material.totalConsumedMassMg)
+            .toList(),
+      ),
+      expected['totalConsumedMassMg'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.materialType).toList(),
+      ),
+      expected['materialTypes'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.colorHex).toList(),
+      ),
+      expected['materialColors'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.provenanceKey).toList(),
+      ),
+      expected['materialProvenanceKeys'],
+    );
+    expect(
+      result.warnings.map((warning) => warning.code),
+      expected['warningCodes'],
+    );
+    expect(result.hasUsableStatistics, isTrue);
+  });
+
+  test('matches a genuine multi-plate multicolor OrcaSlicer export', () async {
+    final fixture = File(
+      'test/fixtures/orca/'
+      'filarithm_multiplate_multicolor_purge_orcaslicer_2_4_1.gcode.3mf',
+    );
+    final expected = jsonDecode(
+      await File(
+        'test/fixtures/orca/'
+        'filarithm_multiplate_multicolor_purge_orcaslicer_2_4_1.expected.json',
+      ).readAsString(),
+    ) as Map<String, dynamic>;
+
+    final result = await parser.parseFile(fixture);
+
+    expect(result.slicer.name, expected['slicer']);
+    expect(result.slicerVersion, expected['slicerVersion']);
+    expect(result.plates, hasLength(expected['plateCount'] as int));
+    expect(
+      result.plates.map((plate) => plate.durationSeconds),
+      expected['durationSeconds'],
+    );
+    expect(
+      result.plates.map((plate) => plate.durationProvenanceKey),
+      expected['durationProvenanceKeys'],
+    );
+    expect(
+      result.plates.map(
+        (plate) => plate.materials
+            .map((material) => material.totalConsumedMassMg)
+            .toList(),
+      ),
+      expected['totalConsumedMassMg'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.modelMassMg).toList(),
+      ),
+      expected['modelMassMg'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.purgeMassMg).toList(),
+      ),
+      expected['purgeMassMg'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.materialType).toList(),
+      ),
+      expected['materialTypes'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.colorHex).toList(),
+      ),
+      expected['materialColors'],
+    );
+    expect(
+      result.plates.map(
+        (plate) =>
+            plate.materials.map((material) => material.provenanceKey).toList(),
+      ),
+      expected['materialProvenanceKeys'],
+    );
+    expect(
+      result.warnings.map((warning) => warning.code),
+      expected['warningCodes'],
+    );
+    expect(result.hasUsableStatistics, isTrue);
   });
 
   test('flags an unsliced 3MF instead of inventing statistics', () {

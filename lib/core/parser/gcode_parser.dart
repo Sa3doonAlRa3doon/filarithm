@@ -115,6 +115,7 @@ class GcodeParser {
       }
     } else if (gramValues.isNotEmpty) {
       for (var index = 0; index < gramValues.length; index++) {
+        if (gramValues[index] <= 0) continue;
         materials.add(
           MaterialConsumption(
             toolIndex: index,

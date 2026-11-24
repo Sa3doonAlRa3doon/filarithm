@@ -3,9 +3,9 @@
   "slicerVersion": "PrusaSlicer 2.9.0-alpha1",
   "durationSeconds": 1047,
   "durationProvenanceKey": "estimated printing time",
-  "totalConsumedMassMg": [1760, 0, 0, 0, 0],
-  "materialTypes": ["ABS", "ABS", "ABS", "ABS", "ABS"],
-  "materialColors": ["#FFF2EC", "#FFF2EC", "#FFF2EC", "#FFF2EC", "#FFF2EC"],
-  "materialProvenanceKeys": ["filament used [g]", "filament used [g]", "filament used [g]", "filament used [g]", "filament used [g]"],
+  "totalConsumedMassMg": [1760],
+  "materialTypes": ["ABS"],
+  "materialColors": ["#FFF2EC"],
+  "materialProvenanceKeys": ["filament used [g]"],
   "warningCodes": ["version_fallback_key"]
 }
