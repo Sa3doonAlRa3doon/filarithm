@@ -961,16 +961,28 @@ class _ViewerPageState extends State<ViewerPage> {
       return;
     }
     try {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ar
-              ? ArViewerPage(mesh: selected.mesh, transform: selected.transform)
-              : VrViewerPage(
-                  mesh: selected.mesh,
-                  transform: selected.transform,
-                ),
-        ),
-      );
+      final updatedTransform = await Navigator.of(context)
+          .push<ObjectTransform>(
+            MaterialPageRoute<ObjectTransform>(
+              builder: (_) => ar
+                  ? ArViewerPage(
+                      mesh: selected.mesh,
+                      transform: selected.transform,
+                    )
+                  : VrViewerPage(
+                      mesh: selected.mesh,
+                      transform: selected.transform,
+                    ),
+            ),
+          );
+      if (!ar && updatedTransform != null && mounted) {
+        _snapshot();
+        _replaceItem(selected.copyWith(transform: updatedTransform));
+        setState(() {
+          _message =
+              'VR movement, rotation, and scale were applied to the scene.';
+        });
+      }
     } catch (error) {
       if (mounted) setState(() => _message = error.toString());
     }

@@ -7,6 +7,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 import '../../core/viewer/mesh_model.dart';
+import '../../core/viewer/vr_controller_service.dart';
 
 class VrViewerPage extends StatefulWidget {
   const VrViewerPage({required this.mesh, required this.transform, super.key});
@@ -19,18 +20,26 @@ class VrViewerPage extends StatefulWidget {
 }
 
 class _VrViewerPageState extends State<VrViewerPage> {
+  final _focusNode = FocusNode();
   StreamSubscription<GyroscopeEvent>? _gyroscope;
+  StreamSubscription<VrControllerEvent>? _controller;
   DateTime? _lastEvent;
+  DateTime? _lastControllerEvent;
   double _yaw = 0;
   double _pitch = 0;
   double _objectYaw = 0;
   double _objectPitch = 0;
+  double _objectX = 0;
+  double _objectY = 0;
+  double _objectZ = 0;
   double _scale = 1;
   double _distanceMeters = 1.2;
   double _fovDegrees = 70;
+  double _ipdMeters = 0.064;
   double _gestureScale = 1;
   bool _locked = false;
   bool _showControls = true;
+  bool _controllerConnected = false;
   String? _sensorError;
 
   @override
@@ -62,11 +71,17 @@ class _VrViewerPageState extends State<VrViewerPage> {
             if (mounted) setState(() => _sensorError = '$error');
           },
         );
+    _controller = const VrControllerService().events.listen(
+      _onControllerEvent,
+      onError: (_) {},
+    );
   }
 
   @override
   void dispose() {
     _gyroscope?.cancel();
+    _controller?.cancel();
+    _focusNode.dispose();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     super.dispose();
   }
@@ -78,35 +93,47 @@ class _VrViewerPageState extends State<VrViewerPage> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: GestureDetector(
-              onTap: () => setState(() => _showControls = !_showControls),
-              onScaleStart: (_) => _gestureScale = _scale,
-              onScaleUpdate: _locked
-                  ? null
-                  : (details) {
-                      setState(() {
-                        if (details.pointerCount > 1) {
-                          _scale = (_gestureScale * details.scale).clamp(
-                            0.05,
-                            20,
-                          );
-                        } else {
-                          _objectYaw += details.focalPointDelta.dx / 180;
-                          _objectPitch += details.focalPointDelta.dy / 180;
-                        }
-                      });
-                    },
-              child: CustomPaint(
-                painter: _StereoMeshPainter(
-                  mesh: widget.mesh,
-                  sourceTransform: widget.transform,
-                  headYaw: _yaw,
-                  headPitch: _pitch,
-                  objectYaw: _objectYaw,
-                  objectPitch: _objectPitch,
-                  scale: _scale,
-                  distanceMeters: _distanceMeters,
-                  fieldOfViewDegrees: _fovDegrees,
+            child: Focus(
+              focusNode: _focusNode,
+              autofocus: true,
+              onKeyEvent: _onKeyboardEvent,
+              child: GestureDetector(
+                onTap: () {
+                  _focusNode.requestFocus();
+                  setState(() => _showControls = !_showControls);
+                },
+                onScaleStart: (_) => _gestureScale = _scale,
+                onScaleUpdate: _locked
+                    ? null
+                    : (details) {
+                        setState(() {
+                          if (details.pointerCount > 1) {
+                            _scale = (_gestureScale * details.scale).clamp(
+                              0.05,
+                              20,
+                            );
+                          } else {
+                            _objectYaw += details.focalPointDelta.dx / 180;
+                            _objectPitch += details.focalPointDelta.dy / 180;
+                          }
+                        });
+                      },
+                child: CustomPaint(
+                  painter: _StereoMeshPainter(
+                    mesh: widget.mesh,
+                    sourceTransform: widget.transform,
+                    headYaw: _yaw,
+                    headPitch: _pitch,
+                    objectYaw: _objectYaw,
+                    objectPitch: _objectPitch,
+                    objectX: _objectX,
+                    objectY: _objectY,
+                    objectZ: _objectZ,
+                    scale: _scale,
+                    distanceMeters: _distanceMeters,
+                    fieldOfViewDegrees: _fovDegrees,
+                    interpupillaryDistanceMeters: _ipdMeters,
+                  ),
                 ),
               ),
             ),
@@ -123,8 +150,8 @@ class _VrViewerPageState extends State<VrViewerPage> {
                   child: Row(
                     children: [
                       IconButton(
-                        tooltip: 'Exit VR',
-                        onPressed: () => Navigator.of(context).pop(),
+                        tooltip: 'Apply changes and exit VR',
+                        onPressed: _applyAndExit,
                         icon: const Icon(Icons.close),
                       ),
                       Expanded(
@@ -132,7 +159,7 @@ class _VrViewerPageState extends State<VrViewerPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Text(
-                              'Stereoscopic phone-headset VR · gyroscope head tracking',
+                              'Stereoscopic VR · gyroscope head tracking · controller ready',
                             ),
                             Row(
                               children: [
@@ -164,6 +191,24 @@ class _VrViewerPageState extends State<VrViewerPage> {
                                 Text('${_fovDegrees.round()}°'),
                               ],
                             ),
+                            Row(
+                              children: [
+                                const SizedBox(
+                                  width: 70,
+                                  child: Text('Eye spacing'),
+                                ),
+                                Expanded(
+                                  child: Slider(
+                                    value: _ipdMeters,
+                                    min: 0.05,
+                                    max: 0.075,
+                                    onChanged: (value) =>
+                                        setState(() => _ipdMeters = value),
+                                  ),
+                                ),
+                                Text('${(_ipdMeters * 1000).round()} mm'),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -180,6 +225,9 @@ class _VrViewerPageState extends State<VrViewerPage> {
                           _pitch = 0;
                           _objectYaw = 0;
                           _objectPitch = 0;
+                          _objectX = 0;
+                          _objectY = 0;
+                          _objectZ = 0;
                           _scale = 1;
                         }),
                         icon: const Icon(Icons.restart_alt),
@@ -195,13 +243,150 @@ class _VrViewerPageState extends State<VrViewerPage> {
             bottom: 8,
             child: Text(
               _sensorError == null
-                  ? 'Touch before inserting into a headset: drag to rotate, pinch to resize. External VR controllers are not available in this phone-headset mode.'
+                  ? _controllerConnected
+                        ? 'Controller: left stick/D-pad move · right stick rotates · triggers resize · A locks · B resets.'
+                        : 'Touch: drag to rotate, pinch to resize. Keyboard: WASD move, Q/E depth, arrows rotate, +/- resize. Bluetooth/USB gamepads connect automatically.'
                   : 'Gyroscope unavailable: $_sensorError',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 11),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  KeyEventResult _onKeyboardEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.space) {
+      setState(() => _locked = !_locked);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyR) {
+      _resetObject();
+      return KeyEventResult.handled;
+    }
+    if (_locked) return KeyEventResult.ignored;
+    setState(() {
+      if (key == LogicalKeyboardKey.keyA) _objectX -= 0.05;
+      if (key == LogicalKeyboardKey.keyD) _objectX += 0.05;
+      if (key == LogicalKeyboardKey.keyW) _objectY += 0.05;
+      if (key == LogicalKeyboardKey.keyS) _objectY -= 0.05;
+      if (key == LogicalKeyboardKey.keyQ) _objectZ -= 0.05;
+      if (key == LogicalKeyboardKey.keyE) _objectZ += 0.05;
+      if (key == LogicalKeyboardKey.arrowLeft) _objectYaw -= 0.08;
+      if (key == LogicalKeyboardKey.arrowRight) _objectYaw += 0.08;
+      if (key == LogicalKeyboardKey.arrowUp) _objectPitch -= 0.08;
+      if (key == LogicalKeyboardKey.arrowDown) _objectPitch += 0.08;
+      if (key == LogicalKeyboardKey.equal || key == LogicalKeyboardKey.add) {
+        _scale = (_scale * 1.05).clamp(0.05, 20);
+      }
+      if (key == LogicalKeyboardKey.minus ||
+          key == LogicalKeyboardKey.numpadSubtract) {
+        _scale = (_scale / 1.05).clamp(0.05, 20);
+      }
+      _clampObjectState();
+    });
+    return KeyEventResult.handled;
+  }
+
+  void _onControllerEvent(VrControllerEvent event) {
+    if (!mounted) return;
+    if (event.type == VrControllerEventType.key) {
+      if (event.pressed != true) return;
+      setState(() {
+        _controllerConnected = true;
+        switch (event.keyCode) {
+          case 96: // A
+            _locked = !_locked;
+          case 97: // B
+            _resetObjectState();
+          case 19: // D-pad up
+            if (!_locked) _objectY += 0.05;
+          case 20: // D-pad down
+            if (!_locked) _objectY -= 0.05;
+          case 21: // D-pad left
+            if (!_locked) _objectX -= 0.05;
+          case 22: // D-pad right
+            if (!_locked) _objectX += 0.05;
+          case 99: // X
+            if (!_locked) _scale = (_scale / 1.05).clamp(0.05, 20);
+          case 100: // Y
+            if (!_locked) _scale = (_scale * 1.05).clamp(0.05, 20);
+          case 102: // L1
+            if (!_locked) _objectZ -= 0.05;
+          case 103: // R1
+            if (!_locked) _objectZ += 0.05;
+          case 108: // Start
+            _showControls = !_showControls;
+        }
+        _clampObjectState();
+      });
+      return;
+    }
+
+    final now = DateTime.now();
+    final previous = _lastControllerEvent;
+    _lastControllerEvent = now;
+    final seconds = previous == null
+        ? 1 / 60
+        : (now.difference(previous).inMicroseconds / 1000000).clamp(
+            1 / 240,
+            0.1,
+          );
+    setState(() {
+      _controllerConnected = true;
+      if (_locked) return;
+      final leftX = _deadZone(event.leftX);
+      final leftY = _deadZone(event.leftY);
+      final rightX = _deadZone(event.rightX);
+      final rightY = _deadZone(event.rightY);
+      _objectX += (leftX + event.hatX) * seconds * 0.8;
+      _objectZ += (leftY + event.hatY) * seconds * 0.8;
+      _objectYaw += rightX * seconds * 2.4;
+      _objectPitch += rightY * seconds * 2.4;
+      final zoom = event.rightTrigger - event.leftTrigger;
+      if (zoom.abs() > 0.02) {
+        _scale = (_scale * math.exp(zoom * seconds)).clamp(0.05, 20);
+      }
+      _clampObjectState();
+    });
+  }
+
+  double _deadZone(double value) => value.abs() < 0.15 ? 0 : value;
+
+  void _clampObjectState() {
+    _objectX = _objectX.clamp(-10, 10);
+    _objectY = _objectY.clamp(-10, 10);
+    _objectZ = _objectZ.clamp(-_distanceMeters + 0.1, 10);
+    _objectPitch = _objectPitch.clamp(-math.pi, math.pi);
+  }
+
+  void _resetObject() => setState(_resetObjectState);
+
+  void _resetObjectState() {
+    _objectYaw = 0;
+    _objectPitch = 0;
+    _objectX = 0;
+    _objectY = 0;
+    _objectZ = 0;
+    _scale = 1;
+  }
+
+  void _applyAndExit() {
+    Navigator.of(context).pop(
+      widget.transform.copyWith(
+        positionX: widget.transform.positionX + _objectX * 1000,
+        positionY: widget.transform.positionY + _objectY * 1000,
+        positionZ: widget.transform.positionZ + _objectZ * 1000,
+        rotationX: widget.transform.rotationX + _objectPitch * 180 / math.pi,
+        rotationY: widget.transform.rotationY + _objectYaw * 180 / math.pi,
+        scaleX: widget.transform.scaleX * _scale,
+        scaleY: widget.transform.scaleY * _scale,
+        scaleZ: widget.transform.scaleZ * _scale,
       ),
     );
   }
@@ -215,9 +400,13 @@ class _StereoMeshPainter extends CustomPainter {
     required this.headPitch,
     required this.objectYaw,
     required this.objectPitch,
+    required this.objectX,
+    required this.objectY,
+    required this.objectZ,
     required this.scale,
     required this.distanceMeters,
     required this.fieldOfViewDegrees,
+    required this.interpupillaryDistanceMeters,
   });
 
   final MeshModel mesh;
@@ -226,9 +415,13 @@ class _StereoMeshPainter extends CustomPainter {
   final double headPitch;
   final double objectYaw;
   final double objectPitch;
+  final double objectX;
+  final double objectY;
+  final double objectZ;
   final double scale;
   final double distanceMeters;
   final double fieldOfViewDegrees;
+  final double interpupillaryDistanceMeters;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -267,15 +460,16 @@ class _StereoMeshPainter extends CustomPainter {
       ..rotateX(-headPitch)
       ..rotateY(-headYaw);
     final center = mesh.center;
-    final eyeOffset = eye == 0 ? -0.032 : 0.032;
+    final eyeOffset = (eye == 0 ? -1 : 1) * interpupillaryDistanceMeters / 2;
     final focal =
         (size.height / 2) / math.tan(fieldOfViewDegrees * math.pi / 360);
     Offset? project(Vector3 source) {
       final point = Vector3.copy(source)..sub(center);
       object.transform3(point);
       point
-        ..x -= eyeOffset
-        ..z += distanceMeters;
+        ..x += sourceTransform.positionX / 1000 + objectX - eyeOffset
+        ..y += sourceTransform.positionY / 1000 + objectY
+        ..z += distanceMeters + sourceTransform.positionZ / 1000 + objectZ;
       view.transform3(point);
       if (point.z <= 0.02) return null;
       return Offset(

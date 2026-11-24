@@ -17,7 +17,7 @@ Architecture and user journeys: [Filarithm — Architecture & User Flows](https:
 - User-triggered signed updates from GitHub Releases: exact-ABI APK selection on Android, exact-Ubuntu `.deb` selection, SHA-256 verification, Android package/signing-certificate/version verification, and data-preserving system installation.
 - Interactive 3D workspace for STL, OBJ, 3MF, GLTF, GLB, and STEP control-point previews, including component selection, move/rotate/scale, axis controls, snapping, locking, reset, duplicate/delete, view presets, scene save, and undo/redo.
 - Android ARCore surface placement with generated offline GLB models, tap-to-place at real millimetre scale, drag/twist/pinch controls, placement locking, and reset.
-- Phone-headset stereo VR with gyroscope head tracking, configurable eye separation/FOV/distance, touch rotation and scaling, and object locking. External motion controllers are intentionally reported as unavailable in phone-headset mode.
+- Phone-headset stereo VR with gyroscope head tracking, configurable eye separation/FOV/distance, saved X/Y/Z transforms, touch and keyboard manipulation, object locking, and automatic Android Bluetooth/USB gamepad controls for movement, rotation, depth, and scale.
 
 ## Privacy
 
@@ -46,7 +46,7 @@ flutter build linux --release
 
 Android release signing reads `android/key.properties`; if it is absent, local release builds use the Android debug key for development only. Tagged GitHub releases require the signing secrets documented in the workflow. The release workflow derives `versionName` from the Git tag, assigns a monotonically increasing workflow run number as `versionCode`, and publishes `SHA256SUMS.txt` beside the APK/AAB artifacts so the in-app updater can reject unverified files.
 
-AR requires an ARCore-capable Android device. VR requires a gyroscope-equipped Android phone and a phone headset. Both features expose an explicit unsupported-device result rather than presenting a simulated success state.
+AR requires an ARCore-capable Android device. VR requires a gyroscope-equipped Android phone and a phone headset. Standard Android gamepads are supported; full tracked OpenXR hand-controller runtimes are not bundled in v1.0. Both immersive features expose an explicit unsupported-device result rather than presenting a simulated success state.
 
 Ubuntu runtime OCR requires:
 

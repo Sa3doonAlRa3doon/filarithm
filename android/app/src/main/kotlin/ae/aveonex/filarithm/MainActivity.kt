@@ -7,10 +7,14 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
 import java.io.File
 import java.security.MessageDigest
 
@@ -18,9 +22,21 @@ class MainActivity : FlutterActivity() {
     private val immersiveChannel = "ae.aveonex.filarithm/immersive"
     private val shareChannel = "ae.aveonex.filarithm/share"
     private val updateChannel = "ae.aveonex.filarithm/update"
+    private val vrControllerChannel = "ae.aveonex.filarithm/vr_controller"
+    private var vrControllerEvents: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, vrControllerChannel)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    vrControllerEvents = events
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    vrControllerEvents = null
+                }
+            })
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, immersiveChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -44,7 +60,7 @@ class MainActivity : FlutterActivity() {
                                     !arAvailable && !hasGyroscope -> "This device has neither an ARCore runtime nor a gyroscope for phone-headset VR."
                                     !arAvailable -> "AR requires an ARCore-certified device with Google Play Services for AR. Sensor-tracked phone VR is available."
                                     !hasGyroscope -> "AR is available. VR requires a gyroscope-equipped phone or a separate supported runtime."
-                                    else -> "ARCore surface placement and sensor-tracked phone-headset VR are available."
+                                    else -> "ARCore surface placement and sensor-tracked phone-headset VR are available. Bluetooth and USB gamepads are supported when connected."
                                 }
                             )
                         )
@@ -140,6 +156,74 @@ class MainActivity : FlutterActivity() {
                 }
             }
     }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_MOVE && isControllerSource(event.source)) {
+            vrControllerEvents?.success(
+                mapOf(
+                    "type" to "axes",
+                    "leftX" to centeredAxis(event, MotionEvent.AXIS_X),
+                    "leftY" to centeredAxis(event, MotionEvent.AXIS_Y),
+                    "rightX" to centeredAxis(event, MotionEvent.AXIS_Z, MotionEvent.AXIS_RX),
+                    "rightY" to centeredAxis(event, MotionEvent.AXIS_RZ, MotionEvent.AXIS_RY),
+                    "hatX" to centeredAxis(event, MotionEvent.AXIS_HAT_X),
+                    "hatY" to centeredAxis(event, MotionEvent.AXIS_HAT_Y),
+                    "leftTrigger" to triggerAxis(event, MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_BRAKE),
+                    "rightTrigger" to triggerAxis(event, MotionEvent.AXIS_RTRIGGER, MotionEvent.AXIS_GAS),
+                )
+            )
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (isControllerSource(event.device?.sources ?: event.source)) {
+            vrControllerEvents?.success(
+                mapOf(
+                    "type" to "key",
+                    "keyCode" to event.keyCode,
+                    "pressed" to (event.action == KeyEvent.ACTION_DOWN),
+                )
+            )
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun isControllerSource(source: Int): Boolean =
+        source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
+            source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK ||
+            source and InputDevice.SOURCE_DPAD == InputDevice.SOURCE_DPAD
+
+    private fun centeredAxis(event: MotionEvent, axis: Int): Float {
+        val range = event.device?.getMotionRange(axis, event.source) ?: return 0f
+        val value = event.getAxisValue(axis)
+        return if (kotlin.math.abs(value) > range.flat) value.coerceIn(-1f, 1f) else 0f
+    }
+
+    private fun centeredAxis(event: MotionEvent, primary: Int, fallback: Int): Float =
+        if (event.device?.getMotionRange(primary, event.source) != null) {
+            centeredAxis(event, primary)
+        } else {
+            centeredAxis(event, fallback)
+        }
+
+    private fun triggerAxis(event: MotionEvent, axis: Int): Float {
+        val range = event.device?.getMotionRange(axis, event.source) ?: return 0f
+        val value = event.getAxisValue(axis)
+        val normalized = if (range.max > range.min) {
+            (value - range.min) / (range.max - range.min)
+        } else {
+            value
+        }
+        return normalized.coerceIn(0f, 1f)
+    }
+
+    private fun triggerAxis(event: MotionEvent, primary: Int, fallback: Int): Float =
+        if (event.device?.getMotionRange(primary, event.source) != null) {
+            triggerAxis(event, primary)
+        } else {
+            triggerAxis(event, fallback)
+        }
 
     private fun canInstallPackages(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
