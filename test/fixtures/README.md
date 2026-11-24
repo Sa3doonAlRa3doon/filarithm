@@ -1,8 +1,9 @@
 # Slicer fixtures
 
 Fixtures in this directory preserve the metadata produced by a real slicer
-export while removing customer data, local paths, UUIDs, printer identifiers,
-dates, object names, geometry, and toolpaths. Each fixture has a deterministic
+export while removing customer data and local paths. Small complete exports use
+only the repository-owned calibration cube; larger third-party samples are
+reduced to anonymized metadata excerpts. Each fixture has a deterministic
 expected JSON result and is parsed from disk in CI.
 
 The Creality Print fixture was derived from a locally generated 7.3 export.
@@ -21,6 +22,12 @@ emits real material-switch flushing G-code. Orca reports consumed totals rather
 than a model/purge split, so the expected normalization deliberately retains
 those values as reported totals without inventing a split. Its SHA-256 is
 `53417CD7A02FAE2DFF726347A0B832C3C79115763AB3AB1F387E79DCECB4F57A`.
+`orca/filarithm_cube_project_orcaslicer_2_4_1.3mf` is a complete, genuine
+unsliced OrcaSlicer 2.4.1 project export of the same repository-owned cube. It
+proves that geometry-only projects are identified as Orca files but rejected
+for pricing with an `unsliced_3mf` warning instead of invented statistics. Its
+SHA-256 is
+`5DE01FC2B5755D386D64E1440253FF8322EFB63E39A6082630B8B02028D9B930`.
 The PrusaSlicer fixture is an anonymized metadata excerpt of the real
 `resources/test_data/test_vase.gcode` export published by the official
 PrusaSlicer repository at commit `e6c85c50dcc56f9968a61dfdd7a3b695e1004037`.

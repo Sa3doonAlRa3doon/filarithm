@@ -1,0 +1,7 @@
+{
+  "slicer": "orcaSlicer",
+  "slicerVersion": "2.4.1",
+  "plateCount": 0,
+  "warningCodes": ["unsliced_3mf"],
+  "confidenceBasisPoints": 3000
+}

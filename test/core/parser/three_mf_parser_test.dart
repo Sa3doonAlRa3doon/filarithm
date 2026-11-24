@@ -175,6 +175,30 @@ void main() {
     expect(result.hasUsableStatistics, isTrue);
   });
 
+  test('matches a genuine unsliced OrcaSlicer project export', () async {
+    final fixture = File(
+      'test/fixtures/orca/filarithm_cube_project_orcaslicer_2_4_1.3mf',
+    );
+    final expected = jsonDecode(
+      await File(
+        'test/fixtures/orca/'
+        'filarithm_cube_project_orcaslicer_2_4_1.expected.json',
+      ).readAsString(),
+    ) as Map<String, dynamic>;
+
+    final result = await parser.parseFile(fixture);
+
+    expect(result.slicer.name, expected['slicer']);
+    expect(result.slicerVersion, expected['slicerVersion']);
+    expect(result.plates, hasLength(expected['plateCount'] as int));
+    expect(
+      result.warnings.map((warning) => warning.code),
+      expected['warningCodes'],
+    );
+    expect(result.confidenceBasisPoints, expected['confidenceBasisPoints']);
+    expect(result.hasUsableStatistics, isFalse);
+  });
+
   test('flags an unsliced 3MF instead of inventing statistics', () {
     final bytes = archiveWith({
       '3D/3dmodel.model': '<model><resources /></model>',

@@ -136,6 +136,7 @@ class ThreeMfParser {
     slicer = slicer == SlicerKind.unknown
         ? _detectMetadataSlicer(metadataText)
         : slicer;
+    version ??= _detectMetadataVersion(metadataText, slicer);
 
     if (plates.isEmpty) {
       final fallback = _parseSliceInfo(metadataText);
@@ -231,14 +232,48 @@ class ThreeMfParser {
 
   SlicerKind _detectMetadataSlicer(String text) {
     final lower = text.toLowerCase();
+    // Orca project settings commonly name a Bambu printer and include BBL
+    // compatibility metadata. Prefer the explicit Orca generator marker so a
+    // genuine Orca project is not mislabeled as Bambu Studio.
+    if (lower.contains('orcaslicer') || lower.contains('orca_slicer')) {
+      return SlicerKind.orcaSlicer;
+    }
     if (lower.contains('bambu')) return SlicerKind.bambuStudio;
-    if (lower.contains('orca')) return SlicerKind.orcaSlicer;
     if (lower.contains('creality')) return SlicerKind.crealityPrint;
     if (lower.contains('prusa') || lower.contains('slic3r')) {
       return SlicerKind.prusaSlicer;
     }
     if (lower.contains('cura')) return SlicerKind.cura;
     return SlicerKind.unknown;
+  }
+
+  String? _detectMetadataVersion(String text, SlicerKind slicer) {
+    final keys = switch (slicer) {
+      SlicerKind.orcaSlicer => const ['OrcaSlicer-Version'],
+      SlicerKind.bambuStudio => const [
+        'BambuStudio-Version',
+        'X-BBL-Client-Version',
+      ],
+      SlicerKind.crealityPrint => const [
+        'CrealityPrint-Version',
+        'Creality-Version',
+      ],
+      SlicerKind.prusaSlicer => const [
+        'PrusaSlicer-Version',
+        'Slic3rPE-Version',
+      ],
+      SlicerKind.cura => const ['Cura-Version'],
+      SlicerKind.unknown => const <String>[],
+    };
+    for (final key in keys) {
+      final match = RegExp(
+        'key\\s*=\\s*["\\x27]${RegExp.escape(key)}["\\x27][^>]*'
+        'value\\s*=\\s*["\\x27]([^"\\x27]+)',
+        caseSensitive: false,
+      ).firstMatch(text);
+      if (match != null) return match.group(1)?.trim();
+    }
+    return null;
   }
 
   String _basename(String path) => path.split(RegExp(r'[/\\]')).last;
