@@ -44,6 +44,18 @@ flutter build appbundle --release
 flutter build linux --release
 ```
 
+The Android integration test creates and persists a quote, verifies its
+immutable revision, generates the bilingual PDF, and launches the production
+share flow on an API 24+ emulator or device:
+
+```bash
+FILARITHM_X64_ONLY=true flutter test integration_test/quote_share_test.dart -d <device-id> --no-uninstall
+```
+
+For a manual ADB inspection of the Android chooser, add
+`--dart-define=FILARITHM_SHARE_PROBE_SECONDS=45`. The x64-only flag affects
+debug integration APK packaging only; mobile release APKs remain ARMv7/ARM64.
+
 Android release signing reads `android/key.properties`; if it is absent, local release builds use the Android debug key for development only. Tagged GitHub releases require the signing secrets documented in the workflow. The release workflow derives `versionName` from the Git tag, assigns a monotonically increasing workflow run number as `versionCode`, and publishes `SHA256SUMS.txt` beside the APK/AAB artifacts so the in-app updater can reject unverified files.
 
 AR requires an ARCore-capable Android device. VR requires a gyroscope-equipped Android phone and a phone headset. Standard Android gamepads are supported; full tracked OpenXR hand-controller runtimes are not bundled in v1.0. Both immersive features expose an explicit unsupported-device result rather than presenting a simulated success state.

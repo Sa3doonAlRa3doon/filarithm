@@ -24,6 +24,11 @@ android {
             // include x86_64 when this environment flag is absent.
             if (System.getenv("FILARITHM_ARM_ONLY").equals("true", ignoreCase = true)) {
                 excludes += setOf("**/x86/**", "**/x86_64/**")
+            } else if (System.getenv("FILARITHM_X64_ONLY").equals("true", ignoreCase = true)) {
+                // Device integration tests do not need the mobile release ABIs.
+                // Keeping only the emulator ABI avoids slow streamed installs
+                // of the large AR/ML native dependency set.
+                excludes += setOf("**/armeabi-v7a/**", "**/arm64-v8a/**", "**/x86/**")
             }
         }
     }

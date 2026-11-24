@@ -76,6 +76,7 @@ class PdfQuoteService {
       arabicBoldBytes.buffer.asUint8List(),
       name: 'IBM Plex Sans Arabic Bold',
     );
+    final searchableArabicFont = pw.Font.ttf(arabicBytes);
     final document = pw.Document(
       title: '${data.quoteNumber} - Filarithm by AVEONEX',
       author: data.businessName,
@@ -389,6 +390,19 @@ class PdfQuoteService {
                 ),
               ],
             ),
+            // HarfBuzz draws contextual Arabic glyphs in visual order. Keep a
+            // transparent logical-order layer as well so copy, search, and PDF
+            // accessibility tools recover the original Unicode text rather
+            // than the visually reversed glyph sequence.
+            pw.Opacity(
+              opacity: 0,
+              child: pw.Text(
+                _searchableArabicText(data, titleArabic),
+                style: pw.TextStyle(font: searchableArabicFont, fontSize: 0.1),
+                textDirection: pw.TextDirection.ltr,
+                maxLines: 1,
+              ),
+            ),
           ],
         ),
       );
@@ -456,6 +470,13 @@ class PdfQuoteService {
 
   String shareSummary(QuoteDocumentData data) =>
       '3D print quotation\nQuote: ${data.quoteNumber}\nCustomer: ${data.customerName}\nTotal: ${_money(data.price.finalPriceMicros)} AED\nTurnaround: ${data.turnaround}\n\nعرض سعر طباعة ثلاثية الأبعاد\nرقم العرض: ${data.quoteNumber}\nالعميل: ${data.customerName}\nالإجمالي: ${_money(data.price.finalPriceMicros)} AED\nمدة التنفيذ: ${data.turnaround}';
+
+  String _searchableArabicText(QuoteDocumentData data, String titleArabic) =>
+      '$titleArabic رقم العرض العميل التاريخ مدة التنفيذ الرقم الضريبي '
+      'اللوحة مرات وحدات الوقت الوزن الإجمالي وزن المجسم وزن الهدر '
+      'تكلفة الإنتاج رسوم المنصة تعديل الحد الأدنى للطلب السعر قبل الضريبة '
+      'ضريبة القيمة المضافة الإجمالي الشروط ${data.termsArabic} '
+      'شكراً لاختياركم أفيو نيكس';
 
   pw.Widget _bilingualInfoRow(
     pw.Font latinBold,
